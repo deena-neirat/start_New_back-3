@@ -289,9 +289,10 @@ public function add_treatments(Request $request)
 {
 
 
-$assistant=DB::table('assistants')->select('*')
-->where('access_token','=',$request->access_token)
-->first();
+   $assistant=DB::table('assistants')->select('*')
+   ->where('access_token','=',$request->access_token)
+   ->first();
+
  if(  $assistant){
 
               $treatments = $request->treatments;
@@ -302,6 +303,7 @@ $assistant=DB::table('assistants')->select('*')
       $x['reg_id']=$treatment['reg_id'];
       $x['req_id']=$treatment['req_id'];
       $x['tooth']=$treatment['tooth'];
+      $x['tooth_id']=$treatment['tooth_id'];
       $x['start_date']=$treatment['start_date'];
       $x['end_date']=$treatment['end_date'];
       $x['description']=$treatment['description'];
@@ -313,7 +315,7 @@ $assistant=DB::table('assistants')->select('*')
       }
 
               }
-             
+
                return response()->json(['messages'=>"created successfully"]);
 
 
@@ -360,39 +362,92 @@ public function add_treatment( $request){
 
 
 
+
+public function get_patient_files(Request $request){
+    $assistant=DB::table('assistants')->select('*')
+    ->where('access_token','=',$request->access_token)
+    ->first();
+    if($assistant){
+        $diseases =DB::table('diseases')
+        ->select('diseases.created_at','diseases.id')
+        ->where('patient_id',$request->patient_id)
+        ->get();
+
+    foreach($diseases as $disease){
+        $treatments =DB::table('treatments')
+        ->join('requirements','requirements.id','treatments.requirement_id')
+        ->select('requirements.name as requirement','treatments.status')
+        ->where('treatments.disease_id',$disease->id)
+        ->get();
+        $disease->treatments=$treatments;
+    }
+
+
+
+        return response()->json(['diseases'=>$diseases ]);
+
+    }else{
+        return response()->json(['messages'=>'no token' ]);
+   }
+}
+
+
+public function get_selected_file(Request $request){
+
+    $assistant=DB::table('assistants')->select('*')
+    ->where('access_token','=',$request->access_token)
+    ->first();
+    if($assistant){
+
+  // disease  treatments   ///  reg  ->> student
+  $treatments=DB::table('treatments')
+  ->join('requirements','requirements.id','treatments.requirement_id')
+  ->join('registerations','treatments.registeration_id','registerations.id')
+  ->join('students','registerations.student_id','students.id')
+  ->join('clinics','registerations.clinic_id','clinics.id')
+   ->select('students.name','students.phone',
+   'requirements.name as requirement_name','treatments.*',
+  'clinics.start_time','clinics.end_time','clinics.day',
+  'clinics.hall')
+  ->where('treatments.disease_id',$request->disease_id)
+  ->get();
+
+    $disease = Disease::find($request->disease_id);
+    if($disease->image != null){
+        $disease->image = asset("storage").'/'.$disease->image;
+
+    }
+
+  return response()->json(['treatments'=>$treatments,
+                             'disease'=>$disease]);
+
+
+    }else{
+        return response()->json(['messages'=>'no token' ]);
+   }
+}
+
 //Storage::delete($secretarie->image);
 // search about patient files by patient id   //  with treatments
 
-public function show_patient_files(Request $request){
+public function change_treatments_status(Request $request){
 
     $assistant=DB::table('assistants')->select('*')
     ->where('access_token','=',$request->access_token)
     ->first();
 
     if($assistant){
-         $patient = Patient::find($request->patient_id);
 
-         if($patient){
-            $files=DB::table('diseases')->select('*')
-            ->where('patient_id','=',$request->patient_id)
-            ->get();
+        $treatment=DB::table('treatments')
+        ->where('id','=',$request->treatment_id)
+        ->where('status','=',"not completed")
+        ->update(["status"=>"canceled"]);
 
-
-            foreach($files as $file){
-                if( $file->image != null){
-                    $file->image=asset("storage").'/'.$file->image;
-                    $file->file_treatments= $this->show_file_treatments($file->id)->original['treatments'];
-
-                }
-            }
-
-           return response()->json(['files'=>$files ]);
-
-         }else{
-           return response()->json(['message'=>'patient not exist' ],404);
-         }
-
-
+        if($treatment ==1){
+            return response()->json(['message'=>"Treatment has been cancelled"]);
+        }else{
+            return response()->json(['message'=>"Treatment not exist"]);
+        }
 
       }else{
         return response()->json(['message'=>'no token' ],404);
@@ -402,15 +457,13 @@ public function show_patient_files(Request $request){
 }
 
 
-
-//  get treatments for one file
-public function show_file_treatments($id){
-
-    $treatments=DB::table('treatments')->select('*')
-    ->where('disease_id','=',$id)
-    ->get();
-    return response()->json(['treatments'=>$treatments]);
-
+public function get_patient_name($patient_id){
+    $patient=DB::table('patients')->select('id','name')
+    ->where('id','=',$patient_id)
+    ->first();
+    if($patient){
+        return response()->json(['patient'=>$patient ]);
+    }
 }
 
 

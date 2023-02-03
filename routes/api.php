@@ -48,18 +48,13 @@ Route::post('/change_password',[AuthController::class,'change_password']);
 
 
 //Route::get('/students',[StudentController::class,'index']);
-Route::get('/student/{id}',[StudentController::class,'get_student_profile']);   // get student profile to show in index page
-Route::post('/student/store',[StudentController::class,'store']);  // create student
-Route::get('/student/get_student_courses/{id}',[StudentController::class,'get_student_courses']);   // get student profile to show in index page
-Route::post('/student/get_course_info',[StudentController::class,'get_course_info']);   // get student profile to show in index page
-Route::post('/student/edit_image',[StudentController::class,'edit_image']);
-Route::post('/student/update_image',[StudentController::class,'update_image']);  // create student
-Route::post('/student/change_password',[StudentController::class,'change_password']);  // create student
-Route::post('/student/login',[StudentController::class,'login']);  // create student
-Route::post('/student/logout',[StudentController::class,'logout']);  // create student
-Route::post('/student/edit',[StudentController::class,'edit']);  // get student data to update it
-Route::post('/student/get_req_status',[StudentController::class,'get_req_status']);  // get student data to update it
-Route::get('/student/forget_password',[StudentController::class,'forget_password']);  // get student data to update it
+
+Route::post('/student/store',[StudentController::class,'store']);
+Route::get('/student/get_student_courses/{access_token}',[StudentController::class,'get_student_courses']);
+Route::get('/student/get_patient_name/{patient_id}',[StudentController::class,'get_patient_name']);
+Route::get('/student/show_progress/{access_token}',[StudentController::class,'show_progress']);
+Route::post('/student/get_req_status',[StudentController::class,'get_req_status']);
+Route::post('/student/get_selected_file',[StudentController::class,'get_selected_file']);
 
 
 
@@ -97,21 +92,20 @@ Route::post('/assistant/create_patient_file',[AssistantController::class,'create
 Route::post('/assistant/get_level_courses',[AssistantController::class,'get_level_courses']);  // logout
 Route::post('/assistant/get_course_sections',[AssistantController::class,'get_course_sections']);  // logout
 Route::post('/assistant/show_section_students',[AssistantController::class,'show_section_students']);
-
-
-
-Route::post('/assistant/show_patient_files',[AssistantController::class,'show_patient_files']);  // logout
 Route::post('/assistant/add_treatments',[AssistantController::class,'add_treatments']);
 Route::post('/assistant/add_treatment',[AssistantController::class,'add_treatment']);
+
+Route::post('/assistant/get_patient_files',[AssistantController::class,'get_patient_files']);  // logout
+Route::post('/assistant/get_selected_file',[AssistantController::class,'get_selected_file']);  // logout
+Route::post('/assistant/change_treatments_status',[AssistantController::class,'change_treatments_status']);  // logout
+Route::get('/assistant/get_patient_name/{patient_id}',[AssistantController::class,'get_patient_name']);  // logout
+
 
 
 
 Route::post('/secretarie/store',[SecretarieController::class,'store']);  // create Secretarie
-Route::post('/secretarie/login',[SecretarieController::class,'login']);  // login secretarie
 Route::get('/secretarie/show_initial_appointments/{access_token}',[SecretarieController::class,'show_initial_appointments']);  // login secretarie
 Route::post('/secretarie/search_initial',[SecretarieController::class,'search_initial']);  // login secretarie
-Route::post('/secretarie/change_password',[SecretarieController::class,'change_password']);  // create Secretarie
-Route::post('/secretarie/update_image',[SecretarieController::class,'update_image']);  // create Secretarie
 Route::get('/secretarie/download_file/{access_token}',[SecretarieController::class,'download_file']);  // login secretarie
 Route::get('/secretarie/send_appointments/{access_token}',[SecretarieController::class,'send_appointments']);  // login secretarie
 
@@ -129,17 +123,14 @@ Route::post('/radiographer/set_patient_image',[RadiographerController::class,'se
 
 //doctors
 Route::post('/doctor/store',[DoctorController::class,'store']);  // create Secretarie
-Route::post('/doctor/login',[DoctorController::class,'login']);  // login secretarie
-Route::post('/doctor/logout',[DoctorController::class,'logout']);  // login secretarie
-Route::post('/doctor/change_password',[DoctorController::class,'change_password']);  // create Secretarie
-Route::post('/doctor/edit_image',[DoctorController::class,'edit_image']);
-Route::post('/doctor/update_image',[DoctorController::class,'update_image']);
-Route::post('/doctor/get_clinic_student',[DoctorController::class,'get_clinic_student']);  // create Secretarie
-Route::post('/doctor/get_student_treatments',[DoctorController::class,'get_student_treatments']);
+Route::get('/doctor/get_courses/{access_token}',[DoctorController::class,'get_courses']);
+Route::post('/doctor/get_course_clinics',[DoctorController::class,'get_course_clinics']);  // create Secretarie
+Route::post('/doctor/get_clinic_students',[DoctorController::class,'get_clinic_students']);  // create Secretarie
 Route::post('/doctor/update_treatment_status',[DoctorController::class,'update_treatment_status']);
-Route::get('/doctor/get_doctor_clinics/{id}',[DoctorController::class,'get_doctor_clinics']);
-Route::post('/doctor/get_students_req',[DoctorController::class,'get_students_req']);
 Route::post('/doctor/get_student_req',[DoctorController::class,'get_student_req']);
+Route::post('/doctor/get_selected_file',[DoctorController::class,'get_selected_file']);
+Route::post('/doctor/get_over_view',[DoctorController::class,'get_over_view']);
+
 
 //get_students_req
 
@@ -152,9 +143,6 @@ Route::post('/admin/update_image',[AdminController::class,'update_image']);
 Route::post('/admin/add_initial',[AdminController::class,'add_initial']);
 Route::get('/admin/get_sentiments_result',[AdminController::class,'get_sentiments_result']);
 Route::get('/show_stars_evaluation',[AdminController::class,'show_stars_evaluation']);  // get student data to update it
-
-
-
 
 
 

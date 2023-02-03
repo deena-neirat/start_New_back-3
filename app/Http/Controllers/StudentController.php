@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Mail\TestEmail;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use App\Models\Student\Student;
+use App\Models\Disease\Disease;
 
+use App\Models\Student\Student;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -16,31 +17,6 @@ use App\Models\Registeration\Registeration;
 
 class StudentController extends Controller
 {
-
-
-
-
-    //logout
-    public function logout(Request $request)
-{   // check if exist
-    $student=DB::table('students')->select('*')
-    ->where('access_token','=',$request->access_token)
-    ->first();
-
-   // logout
-    if($student){
-          DB::table('students')->where('access_token','=' ,$request->access_token)->update(['access_token'=>null])  ;
-
-          return response()->json(['msg'=>'logout' ]);
-
-        }else{
-            return response()->json(['msg'=>'no token' ]);
-        }
-
-
-}
-
-
 
   //      انشاء طالب
   public function store(Request $request)
@@ -90,21 +66,22 @@ class StudentController extends Controller
 
 
 
-
-
 //  get all student courses
-  public function get_student_courses($id)
+  public function get_student_courses( $access_token)
   {
+    $student =  DB::table('students')->where('access_token' ,'=',$access_token)->first() ;
+    if($student == null){
+      return response()->json(['messages'=>"no token"]);
+    }
       $courses =  DB::table('students')
       ->join('registerations', 'students.id', '=', 'registerations.student_id')
       ->join('clinics', 'registerations.clinic_id', '=', 'clinics.id')
       ->join('courses', 'clinics.course_id', '=', 'courses.id')
-      ->select( 'courses.id', 'courses.name','clinics.day','clinics.start_time','clinics.end_time' ,'courses.image')
-      ->where('students.id' ,'=',$id)->get() ;
+      ->select( 'courses.id','clinics.section', 'courses.name','clinics.day','clinics.start_time','clinics.end_time' ,'courses.image')
+      ->where('students.id' ,'=',$student->id)->get() ;
 
-      if($courses==null){
-          return response()->json(['msg'=>'no student']);
-                      }
+
+
                       foreach($courses as $course){
                         if( $course->image != null){
                             $course->image=asset("storage").'/'.$course->image;
@@ -117,44 +94,7 @@ class StudentController extends Controller
   }
 
 
-  // get student treatments in selected courses
-public function get_course_info(Request $request ){
 
-    if(!isset( $request->access_token)){
-        return response()->json(['msg'=>'there is no token' ]);
-     }
-
-     $student =  DB::table('students')->where('access_token' ,'=', $request->access_token)->first() ;
-     if($student){
-        $treatments =  DB::table('students')
-        ->join('registerations', 'students.id', '=', 'registerations.student_id')
-        ->join('clinics', 'registerations.clinic_id', '=', 'clinics.id')
-        ->join('courses', 'clinics.course_id', '=', 'courses.id')
-        ->join('treatments', 'treatments.registeration_id', '=', 'registerations.id')
-        ->join('requirements', 'requirements.id', '=', 'treatments.requirement_id')
-        ->join('diseases', 'diseases.id', '=', 'treatments.disease_id')
-        ->join('patients', 'patients.id', '=', 'diseases.patient_id')
-        ->select('requirements.name as req_name','treatments.*','diseases.*','patients.name as patient_name',
-        'patients.date_of_birth','patients.gender','patients.address','patients.phone')
-        ->where('students.id' ,'=',$student->id)
-        ->where('courses.id' ,'=',$request->id)->get() ;  //,
-
-  // clinic id + reg id +  treatment id+ dis + patient info
-    if($treatments !=null){
-
-       foreach($treatments as $treatment){
-            $treatment->image=asset("storage").'/'.$treatment->image;
-        }
-
-       return response()->json(['treatments'=>$treatments],200);
-     }
-
-     }else{
-        return response()->json(['msg'=>'should be loggedin' ],404);
-     }
-
-
-}
 
 // get course req  for loggedin student
 public function get_req_status(Request $request){
@@ -177,8 +117,11 @@ public function get_req_status(Request $request){
  // get student treatments in this course with treatments status
     $treatments=DB::table('requirements')
       ->leftJoin('treatments','treatments.requirement_id','requirements.id')
+      ->leftJoin('diseases','treatments.disease_id','diseases.id')
+      ->leftJoin('patients','diseases.patient_id','patients.id')
       ->select('requirements.id as req_id','requirements.name','requirements.course_id',
-      'treatments.status','treatments.registeration_id as reg_id')
+      'treatments.status','treatments.registeration_id as reg_id',
+      'treatments.start_date','treatments.end_date',  'treatments.disease_id' ,'patients.name')
       ->where('course_id',$request->course_id)
       ->where('treatments.registeration_id','=', $student->reg_id)
       ->get();
@@ -187,10 +130,26 @@ public function get_req_status(Request $request){
       foreach($student_req as $req){$req->status=null;}
 
       foreach( $student_req as $req){    // course req
+                    $req->status= null;
+                    $req->start_date= null;
+                    $req->end_date= null;
+                    $req->disease_id= null;
+                    $req->patient= null;
+
+
+       }
+
+
+      foreach( $student_req as $req){    // course req
         foreach( $treatments as $treatment){   //student treatments
       //      if( $student->reg_id == $treatment->reg_id){
                 if($req->id == $treatment->req_id){
                     $req->status= $treatment->status;
+                    $req->start_date= $treatment->start_date;
+                    $req->end_date= $treatment->end_date;
+                    $req->disease_id= $treatment->disease_id;
+                    $req->patient= $treatment->name;
+
                 }
           //  }
         }
@@ -202,7 +161,94 @@ public function get_req_status(Request $request){
 }
 
 
+//  show patient file
 
+public function get_selected_file(Request $request){
+
+    $student =  DB::table('students')->where('access_token' ,'=',$request->access_token)->first() ;
+
+    if($student){
+
+  // disease  treatments   ///  reg  ->> student
+  $treatments=DB::table('treatments')
+  ->join('registerations','treatments.registeration_id','registerations.id')
+  ->join('students','registerations.student_id','students.id')
+  ->join('clinics','registerations.clinic_id','clinics.id')
+   ->select('students.name','students.phone','treatments.*',
+  'clinics.start_time','clinics.end_time','clinics.day',
+  'clinics.hall')
+  ->where('treatments.disease_id',$request->disease_id)
+  ->get();
+
+    $disease = Disease::find($request->disease_id);
+    if($disease->image != null){
+        $disease->image = asset("storage").'/'.$disease->image;
+
+    }
+
+  return response()->json(['treatments'=>$treatments,
+                             'disease'=>$disease]);
+
+
+    }else{
+        return response()->json(['messages'=>'no token' ]);
+   }
+}
+
+
+
+public function get_patient_name($patient_id){
+    $patient=DB::table('patients')->select('id','name')
+    ->where('id','=',$patient_id)
+    ->first();
+    if($patient){
+        return response()->json(['patient'=>$patient ]);
+    }
+}
+
+
+public function show_progress($access_token){
+    $student =  DB::table('students')->where('access_token' ,'=',$access_token)->first() ;
+    if($student == null){
+      return response()->json(['messages'=>"no token"]);
+    }
+
+    $courses =  DB::table('students')
+    ->join('registerations', 'students.id', '=', 'registerations.student_id')
+    ->join('clinics', 'registerations.clinic_id', '=', 'clinics.id')
+    ->join('courses', 'clinics.course_id', '=', 'courses.id')
+    ->select( 'courses.id as course_id', 'courses.name','registerations.id  as registeration_id')
+    ->where('students.id' ,'=',$student->id)
+    ->get() ;
+
+
+    foreach($courses  as $course){
+
+        $reqs= DB::table('courses')
+        ->join('requirements', 'requirements.course_id', '=', 'courses.id')
+        ->select( 'requirements.name','requirements.id')
+        ->where('courses.id' ,'=',$course->course_id)->get() ;
+
+        foreach( $reqs as $req){
+            $req->status= DB::table('treatments')
+            ->join('requirements', 'requirements.id', '=', 'treatments.requirement_id')
+            ->select(  'treatments.status')
+            ->where('treatments.registeration_id' ,'=',$course->registeration_id)
+            ->first();
+        }
+
+        $course->progress = $reqs;
+
+    }
+
+
+
+
+
+   return response()->json(['progress'=>$courses]);
+
+
+}
 
 
 }

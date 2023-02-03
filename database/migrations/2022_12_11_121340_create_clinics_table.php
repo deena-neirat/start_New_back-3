@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('clinics', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->integer('section');
             $table->enum('day',['sat','sun','mon','tue','wed','thu','Fri']);
             $table->time('start_time');
             $table->time('end_time');
